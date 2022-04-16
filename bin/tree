@@ -1,0 +1,41 @@
+#!/bin/python
+
+from sys import argv
+from os import listdir, chdir, getcwd
+from os.path import isdir
+from json import loads
+
+notend=[]
+end=[]
+
+#help variable
+h = False
+for i in argv[1:]:
+        #get the options
+        if i=='-h': h = True
+        elif i.startswith('notend='): notend=loads(i.split('=')[1])
+        elif i.startswith('end='):    end   =loads(i.split('=')[1])
+if h:
+        #print the help
+        print('example:')
+        print('''tree notend='[".tar", ".gz"]'     -> evaluated as a python list, will not print files that end with those extentions''')
+        print('''tree    end='[".tar", ".gz"]'     -> same as before, returns only the ones that have that ending''')
+        exit()
+
+#print(end, notend)
+
+def dirs(d):
+        for x in listdir(d):
+                p = d+'/'+x
+                if isdir(p): dirs(p)
+                else:
+                        #simple logic stuff
+                        show0 = 1
+                        show1 = not bool(len(end))
+                        for param in notend:
+                                if x.endswith(param): show0=0
+                        for param in end:
+                                if not x.endswith(param): show1=0
+                        if show0 and show1: print(p)
+
+dirs(getcwd())
