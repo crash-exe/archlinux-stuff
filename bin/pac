@@ -12,13 +12,15 @@ read package
 #find all packages
 #pipe to fzf for interactive selection
 aurlink=$(curl -s "https://aur.archlinux.org/packages?K=$package" \
-  | grep -E ".*aur.archlinux.org.*" \
+  | grep -E ".*<a.*/packages/.*\">$" \
   | sed -E "s/.*\"\/(.*)\">/\1/" \
   | fzf -i --reverse  \
 )
+echo $aurlink
 
+[[ ! $aurlink ]] && echo "None selected" && exit
 #get the package(folder) name
-package=$(echo $aurlink | sed -E "s/.*.git\">(.*)<.*/\1/")
+package=$(echo $aurlink | sed -E "s/.*\/(.*)/\1/")
 
 git clone "$(curl "https://aur.archlinux.org/$aurlink"\
   | grep -E ".*aur.archlinux.org.*" \
