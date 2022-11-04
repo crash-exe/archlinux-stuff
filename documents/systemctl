@@ -1,0 +1,90 @@
+Most Linux systems have a set of programs called “systemd”. Systemd has, among other things, the ability to run your scripts on startup.
+
+In order to do this, however, you need to understand systemd unit files. A unit file is a file located at /usr/lib/systemd/system/(which I will refer to as $sysD) and this file describes what systemd does with that program. Here as example of such a file:
+```
+[Unit]
+Description=alarm application
+Wants=network.target
+IgnoreOnIsolate=true
+
+[Service]
+Type=fork
+PIDFile=/run/alarmy
+ExecStart=/home/crash/.local/bin/alarm
+ExecReload=kill -HUP $MAINPID
+
+[Install]
+WantedBy=default.target
+```
+
+This is what I get when I run
+systemctl status alarm
+```
+● alarm.service - alarm application
+     Loaded: loaded (/usr/lib/systemd/system/alarm.service; disabled; preset: disabled)
+     Active: active (running) since Tue 2022-11-01 10:31:46 UTC; 1h 23min ago
+   Main PID: 506 (alarm)
+      Tasks: 1 (limit: 18418)
+     Memory: 25.9M
+        CPU: 1h 27min 23.349s
+     CGroup: /system.slice/alarm.service
+             ├─    506 /bin/bash /home/crash/.local/bin/alarm
+             └─3035779 date +%M/%H/%d/%m/%y/%w
+```
+
+The [Unit] section:
+A section containing some Several things:
+	Description: The thing that is displayed in the first line of the status
+	IgnoreOnIsolate: this will persistance mode, which is happening during kernel loading
+	After: Run after something. After=network.target makes your program run after a network is available. For example, if you are running it on a server, this will make your script run once you are connected to the internet.
+	Before: Same thing as after, but, well, before. This can be useful if, say, you want your script to run before the server.
+NOTE: you can find the available options at $sysD
+
+
+The [Service] section:
+	Type: the type of the process. The easiest thing is to set it to simple, but, as usual, you can read the manual page for all the options: https://man.archlinux.org/man/systemd.service.5.en .  After=simple should work just fine. If it does not work as intended, use the fork option.
+	ExecStart:The script that will be run. You can use python ~path to file~, or have your python file, but add the line #!/bin/python OR #!/bin/python3, in which case you can just enter the file name. On some systems the first option will work, however, if it does not, you need to use the full path to the python interpreter, i.e. /bin/python ~path to file~ OR /bin/python3 ~path to file~.
+	ExecReload: this is a field that defines how systemctl restart YourService will behave. If your script is, say, writing to a database, and you want to restart it(for example if you change the file), normally systemd will just kill the process, potentially corrupting your database.
+	Restart: another option you might find interesting, this one allows you to restart the script in different circumstances. Exaple: Restart=no
+	PIDFile: specifies a process id file, the standard is to put it into /run/. This is practical if you have an external script and try to kill ~the process id~, since it will be located in /run/ and easy to find
+
+Exit codes
+If you are on Linux, run the command:
+python3 -c "while True: print()"
+This will print a new line indefinitely. Corrupt the program and type:
+echo $?
+This will give you a code that is != 0. This means the code did not exit cleanly. Now try the same thing, but instead of python3 -c "while True: print()" do:
+python3 -c "print()"
+Typing echo $? will now give you a result of 0. This is so that you understand the table in the section Restart= in the manual page.
+
+The [Install] section
+Without this, your program cannot run on startup. The simplest thing is to copy the line that I have. What it does is it makes sure everything is setup and then runs the script. The default.target basically means “wait for everything”.
+There are other options.
+
+WantedBy=default.target
+this can also be getty.target.wants  multi-user.target.wants > these files are located in /etc/systemd/system
+
+RequiredBy: same as wanted by, but will fail if something you specified failed.
+
+Long story short
+Based on what you told me, here is your service file, which you put in $sysD:
+[Unit]
+Description=alarm application
+After=network.target
+IgnoreOnIsolate=true
+
+[Service]
+Type=simple
+PIDFile=/run/python_script0
+ExecStart=/bin/python3 ~your python file~
+
+[Install]
+WantedBy=default.target
+
+Save it as yourservicename.service
+
+To start the service, refresh systemd:
+systemctl daemon-reload
+and enable the service
+systemctl enable yourservicename
+and reboot.
