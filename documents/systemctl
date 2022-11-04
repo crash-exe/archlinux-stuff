@@ -1,3 +1,5 @@
+This is a document written for someone at freelancer.com. However, when I have finished writing this document, the person did not respond, so I decided to publish it. Shoutout to my frined for the idea of not wasting my work.
+
 Most Linux systems have a set of programs called “systemd”. Systemd has, among other things, the ability to run your scripts on startup.
 
 In order to do this, however, you need to understand systemd unit files. A unit file is a file located at /usr/lib/systemd/system/(which I will refer to as $sysD) and this file describes what systemd does with that program. Here as example of such a file:
