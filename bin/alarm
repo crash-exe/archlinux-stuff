@@ -1,0 +1,15 @@
+#!/bin/bash
+ALARM_FILE="/home/crash/.alarm"
+
+#minute, hour, day, month, year, week day
+[[ -f $ALARM_FILE ]] && touch $ALARM_FILE
+
+while true; do
+	time=$(date +"%M/%H/%d/%m/%y/%w")
+	[[ $time = $prev_time ]] && continue
+	echo $time
+	while read line; do
+		echo $time | grep -E "${line##* }" && xfce4-terminal -e "${line% *}"
+	done < $ALARM_FILE
+	prev_time=$time
+done
